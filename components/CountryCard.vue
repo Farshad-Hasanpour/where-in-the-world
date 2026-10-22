@@ -1,24 +1,24 @@
 <template>
-	<nuxt-link v-wave class="country" :to="`/countries/${country.cca3}`" :draggable="false">
+	<nuxt-link v-wave class="country" :to="`/countries/${country.codes.alpha_3}`" :draggable="false">
 		<img
-				ref="flagImage"
-				class="country__flag"
-				:src="require('@/assets/img/flag-placeholder.png')"
-				:data-main-src="country.flag.src"
-				:alt="country.flag.alt || ''"
-				:draggable="false"
+			ref="flagImage"
+			class="country__flag"
+			:src="require('@/assets/img/flag-placeholder.png')"
+			:data-main-src="country.flag.src"
+			:alt="country.flag.alt || ''"
+			:draggable="false"
 		>
 		<div class="country-details">
-			<h3 class="country-details__name">{{ country.name.common }}</h3>
-			<div v-for="field in fields" :key="field" class="country-fields">
-				<span class="country-fields__title">{{ field }}: </span>
+			<h3 class="country-details__name">{{ country.names.common }}</h3>
+			<div v-for="field in fields" :key="field.key" class="country-fields">
+				<span class="country-fields__title">{{ field.label }}: </span>
 				<span class="country-fields__value">
 					{{
-						!country[field]
+						!country[field.key]
 							? 'N/A'
-							: typeof country[field] !== 'number'
-								? country[field]
-								: country[field].toLocaleString()
+							: typeof country[field.key] !== 'number'
+								? country[field.key]
+								: country[field.key].toLocaleString()
 					}}
 				</span>
 			</div>
@@ -34,7 +34,20 @@ export default {
 	},
 	computed: {
 		fields(){
-			return ['population', 'region', 'capital']
+			return [
+				{
+					key: 'population',
+					label: 'Population'
+				},
+				{
+					key: 'region',
+					label: 'Region',
+				},
+				{
+					key: 'capital',
+					label: 'Capital'
+				}
+			]
 		}
 	}
 }

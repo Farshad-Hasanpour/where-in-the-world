@@ -110,7 +110,7 @@ export default {
 	data(){
 		return{
 			page: 1,
-			perPage: 12 // It's better to be divisible by 2, 3 and 4 (number of countries per row in various screens)
+			perPage: 25 // It's better to be divisible by 2, 3 and 4 (number of countries per row in various screens)
 		}
 	},
 	computed:{

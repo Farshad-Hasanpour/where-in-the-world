@@ -1,21 +1,22 @@
 export default function($axios, env) {
-	const config = {
-		headers: {
-			Authorization: `Bearer ${env.NUXT_APP_COUNTRY_API_TOKEN}`
-		}
+	const headers = {
+		Authorization: `Bearer ${env.NUXT_APP_COUNTRY_API_TOKEN}`
 	};
 
 	return {
 		getAllCountries({
-			fields = 'cca3,name,population,region,capital,flags'
+			fields = 'codes.alpha_3,names.common,names.native,population,region,capitals.name,flag',
+			limit = 25
 		} = {}){
-			return $axios.get(`/api/all`, {
+			return $axios.get(`https://api.restcountries.com/countries/v5`, {
+				headers,
 				params: {
-					fields
+					response_fields: fields,
+					limit,
 				}
-			}, config).then(async res =>
-				await Promise.all(res.data.map(async country => await this.sanitizeCountry(country)))
-			)
+			}).then(async res => {
+				return await Promise.all(res.data.data.objects.map(async country => await this.sanitizeCountry(country)))
+			})
 		},
 		getCountryDetails({
 			fields = 'cca3,name,population,region,subregion,capital,flags,tld,borders,languages,currencies',
@@ -23,20 +24,21 @@ export default function($axios, env) {
 		} = {}){
 			if(!code) throw new Error('code is required');
 			return $axios.get(`/api/alpha/${code}`, {
+				headers,
 				params: {
-					fields,
+					response_fields: fields,
 				}
-			}, config).then(async res =>
+			}).then(async res =>
 				await this.sanitizeCountry(res.data)
 			)
 		},
 		async sanitizeCountry(country){
-			if(country.name){
-				const langCodes = Object.keys(country.name.nativeName);
-				country.name.nativeName = !langCodes.length ? null : country.name.nativeName[langCodes[0]].common
+			if(country.names.native){
+				const langCodes = Object.keys(country.names.native);
+				country.names.native = !langCodes.length ? null : country.names.native[langCodes[0]].common
 			}
 
-			if(country.capital) country.capital = !country.capital[0] ? 'N/A' : country.capital[0]
+			if(country.capitals) country.capital = !country.capitals[0]?.name ? 'N/A' : country.capitals[0]?.name
 
 			if(country.languages) country.languages = Object.values(country.languages).join(', ');
 
@@ -50,28 +52,34 @@ export default function($axios, env) {
 				country.borders = await this.getCountryNames({ codes: country.borders.join(',') })
 			}
 
-			if(country.flags){
+			if(country.flag){
 				country.flag = {
-					alt: country.flags.alt || 'country flag',
-					src: country.flags.svg || country.flags.png || null
+					alt: country.flag.description || 'country flag',
+					src: country.flag.url_svg || country.flag.url_png || null
 				}
-				delete country.flags;
 			}
 
 			return country;
 		},
 		getCountryNames({
-			fields = 'cca3,name',
+			fields = 'codes.alpha_3,names.common',
 			codes = ''
 		} = {}){
 			if(!codes) throw new Error('codes are required');
-			return $axios.get(`/api/alpha`, {
+			return $axios.get(`https://api.restcountries.com/countries/v5/codes.alpha_3/${codes}`, {
+				headers,
 				params: {
-					fields,
-					codes
+					response_fields: fields,
 				}
-			}, config).then(res => {
-				return res.data.map(country => ({
+			}).then(res => {
+				if (!res.data.data.objects.length) return codes.map(code => ({
+					codes: {
+						alpha_3: code
+					},
+					name: code
+				}))
+
+				return res.data.data.objects.map(country => ({
 					...country,
 					name: country.name.common
 				}));
