@@ -1,4 +1,8 @@
 export default function($axios) {
+	const headers = {
+		Authorization: `Bearer ${process.env.NUXT_APP_COUNTRY_API_TOKEN}`
+	};
+
 	return {
 		getAllCountries({
 			fields = 'cca3,name,population,region,capital,flags'
@@ -6,7 +10,8 @@ export default function($axios) {
 			return $axios.get(`/api/all`, {
 				params: {
 					fields
-				}
+				},
+				headers,
 			}).then(async res =>
 				await Promise.all(res.data.map(async country => await this.sanitizeCountry(country)))
 			)
@@ -19,7 +24,8 @@ export default function($axios) {
 			return $axios.get(`/api/alpha/${code}`, {
 				params: {
 					fields,
-				}
+				},
+				headers,
 			}).then(async res =>
 				await this.sanitizeCountry(res.data)
 			)
@@ -63,7 +69,8 @@ export default function($axios) {
 				params: {
 					fields,
 					codes
-				}
+				},
+				headers,
 			}).then(res => {
 				return res.data.map(country => ({
 					...country,

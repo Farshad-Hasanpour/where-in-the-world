@@ -87,7 +87,7 @@ export default {
 	},
 	proxy: {
 		'/api/': {
-			target: 'https://restcountries.com/v3.1/',
+			target: 'https://api.restcountries.com/countries/v5/',
 			pathRewrite: {'^/api': ''}
 		}
 	},
