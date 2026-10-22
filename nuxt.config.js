@@ -1,6 +1,7 @@
 export default {
 	env: {
-		'GTAG_MEASUREMENT_ID': process.env.NODE_ENV === 'production' ? 'G-RR55G5KZFE' : ''
+		'GTAG_MEASUREMENT_ID': process.env.NODE_ENV === 'production' ? process.env.GTAG_MEASUREMENT_ID || '' : '',
+		'NUXT_APP_COUNTRY_API_TOKEN': process.env.NUXT_APP_COUNTRY_API_TOKEN || '',
 	},
 	// Global page headers: https://go.nuxtjs.dev/config-head
 	head: {

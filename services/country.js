@@ -1,6 +1,8 @@
-export default function($axios) {
-	const headers = {
-		Authorization: `Bearer ${process.env.NUXT_APP_COUNTRY_API_TOKEN}`
+export default function($axios, env) {
+	const config = {
+		headers: {
+			Authorization: `Bearer ${env.NUXT_APP_COUNTRY_API_TOKEN}`
+		}
 	};
 
 	return {
@@ -10,9 +12,8 @@ export default function($axios) {
 			return $axios.get(`/api/all`, {
 				params: {
 					fields
-				},
-				headers,
-			}).then(async res =>
+				}
+			}, config).then(async res =>
 				await Promise.all(res.data.map(async country => await this.sanitizeCountry(country)))
 			)
 		},
@@ -24,9 +25,8 @@ export default function($axios) {
 			return $axios.get(`/api/alpha/${code}`, {
 				params: {
 					fields,
-				},
-				headers,
-			}).then(async res =>
+				}
+			}, config).then(async res =>
 				await this.sanitizeCountry(res.data)
 			)
 		},
@@ -69,9 +69,8 @@ export default function($axios) {
 				params: {
 					fields,
 					codes
-				},
-				headers,
-			}).then(res => {
+				}
+			}, config).then(res => {
 				return res.data.map(country => ({
 					...country,
 					name: country.name.common
