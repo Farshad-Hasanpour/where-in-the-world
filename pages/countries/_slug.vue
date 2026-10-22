@@ -16,7 +16,7 @@
 				<img class="flag" :src="country.flag.src" :alt="country.flag.alt" :draggable="false">
 			</div>
 			<div>
-				<h3 class="country-name">{{ country.name.common }}</h3>
+				<h3 class="country-name">{{ country.names.common }}</h3>
 				<div class="extra">
 					<div class="extra__primary">
 						<div v-for="field in primaryFields" :key="field.name" class="country-fields">
@@ -39,8 +39,8 @@
 					<span class="borders__title">Border Countries:</span>
 					<nuxt-link
 							v-for="border in country.borders"
-							:key="border.cca3"
-							:to="`/countries/${border.cca3}`"
+							:key="border.codes.alpha_3"
+							:to="`/countries/${border.codes.alpha_3}`"
 							:draggable="false"
 							class="border-btn"
 					>
@@ -77,7 +77,7 @@ export default {
 	computed: {
 		primaryFields(){
 			return [
-				{ name: 'name.nativeName', title: 'Native Name' },
+				{ name: 'names.native', title: 'Native Name' },
 				{ name: 'population', title: 'Population' },
 				{ name: 'region', title: 'Region' },
 				{ name: 'subregion', title: 'Subregion' },
@@ -86,7 +86,7 @@ export default {
 		},
 		secondaryFields(){
 			return [
-				{ name: 'tld', title: 'Top Level Domains' },
+				{ name: 'tlds', title: 'Top Level Domains' },
 				{ name: 'currencies', title: 'Currencies' },
 				{ name: 'languages', title: 'Languages' },
 			]

@@ -19,17 +19,17 @@ export default function($axios, env) {
 			})
 		},
 		getCountryDetails({
-			fields = 'cca3,name,population,region,subregion,capital,flags,tld,borders,languages,currencies',
+			fields = 'codes.alpha_3,names.common,names.native,population,region,subregion,capitals.name,flag,tlds,borders,languages.name,currencies.name',
 			code = ''
 		} = {}){
 			if(!code) throw new Error('code is required');
-			return $axios.get(`/api/alpha/${code}`, {
+			return $axios.get(`https://api.restcountries.com/countries/v5/codes.alpha_3/${code}`, {
 				headers,
 				params: {
 					response_fields: fields,
 				}
 			}).then(async res =>
-				await this.sanitizeCountry(res.data)
+				await this.sanitizeCountry(res.data.data.objects[0])
 			)
 		},
 		async sanitizeCountry(country){
@@ -40,13 +40,11 @@ export default function($axios, env) {
 
 			if(country.capitals) country.capital = !country.capitals[0]?.name ? 'N/A' : country.capitals[0]?.name
 
-			if(country.languages) country.languages = Object.values(country.languages).join(', ');
+			if(country.languages) country.languages = country.languages.map(lang => lang.name).join(', ');
 
-			if(country.tld) country.tld = Object.values(country.tld).join(', ');
+			if(country.tlds) country.tlds = Object.values(country.tlds).join(', ');
 
-			if(country.currencies){
-				country.currencies = Object.values(country.currencies).map(currency => currency.name).join(', ')
-			}
+			if(country.currencies) country.currencies = country.currencies.map(curr => curr.name).join(', ');
 
 			if(country.borders && country.borders.length){
 				country.borders = await this.getCountryNames({ codes: country.borders.join(',') })
@@ -66,23 +64,25 @@ export default function($axios, env) {
 			codes = ''
 		} = {}){
 			if(!codes) throw new Error('codes are required');
-			return $axios.get(`https://api.restcountries.com/countries/v5/codes.alpha_3/${codes}`, {
-				headers,
-				params: {
-					response_fields: fields,
-				}
-			}).then(res => {
-				if (!res.data.data.objects.length) return codes.map(code => ({
-					codes: {
-						alpha_3: code
-					},
-					name: code
+			const codesArray = codes.split(',');
+			return Promise.all(
+				codesArray.map(countryCode => $axios.get(`https://api.restcountries.com/countries/v5/codes.alpha_3/${countryCode}`, {
+					headers,
+					params: {
+						response_fields: fields,
+					}
 				}))
-
-				return res.data.data.objects.map(country => ({
-					...country,
-					name: country.name.common
-				}));
+			).then(responses => {
+				const result = []
+				responses.forEach((res, resIndex) => {
+					result.push({
+						codes: {
+							alpha_3: codesArray[resIndex],
+						},
+						name: res.data.data.objects[0].names.common
+					});
+				})
+				return result;
 			})
 		}
 	}
