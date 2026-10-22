@@ -19,7 +19,7 @@ export default function($axios, env) {
 			if(region) params.region = region;
 			if(q) params.q = q;
 
-			return $axios.get(`https://api.restcountries.com/countries/v5`, {
+			return $axios.get(`/api/`, {
 				headers,
 				params
 			}).then(async res => {
@@ -35,7 +35,7 @@ export default function($axios, env) {
 			code = ''
 		} = {}){
 			if(!code) throw new Error('code is required');
-			return $axios.get(`https://api.restcountries.com/countries/v5/codes.alpha_3/${code}`, {
+			return $axios.get(`/api/codes.alpha_3/${code}`, {
 				headers,
 				params: {
 					response_fields: fields,
@@ -78,7 +78,7 @@ export default function($axios, env) {
 			if(!codes) throw new Error('codes are required');
 			const codesArray = codes.split(',');
 			return Promise.all(
-				codesArray.map(countryCode => $axios.get(`https://api.restcountries.com/countries/v5/codes.alpha_3/${countryCode}`, {
+				codesArray.map(countryCode => $axios.get(`/api/codes.alpha_3/${countryCode}`, {
 					headers,
 					params: {
 						response_fields: fields,
