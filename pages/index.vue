@@ -36,18 +36,18 @@
 						class="region-select__icon cursor-pointer"
 				/>
 			</div>
-			<button v-wave type="button" class="sort-btn normal" @click.stop="toggleSort">
+			<!-- <button v-wave type="button" class="sort-btn normal" @click.stop="toggleSort">
 				<span class="sort-btn__name">sort: Name</span>
 				<c-icon
 						:name="$store.state.icons.asc"
 						color="var(--color-input)"
 						:class="{'reverse': sort.type !== 'ASC'}"
 				/>
-			</button>
+			</button>-->
 		</div>
 		<div class="country-list">
 			<country-card
-					v-for="country in shownCountries"
+					v-for="country in countries"
 					:key="country.codes.alpha_3"
 					ref="countryCard"
 					:country="country"
@@ -56,10 +56,7 @@
 				<country-skeleton v-for="i in perPage" :key="`country-skeleton-${i}`" />
 			</template>
 		</div>
-		<p v-show="loadingMore" style="text-align: center; font-size: 32px; margin-bottom: 16px;">
-			Loading More...
-		</p>
-		<p v-show="!shownCountries.length && !loadingMore" class="no-country">
+		<p v-show="!countries.length && !loadingMore" class="no-country">
 			no country is matched with specified filters
 		</p>
 		<div ref="autoPagination" class="auto-pagination" />
@@ -79,18 +76,21 @@ export default {
 	async asyncData({ error, query, $countryService }){
 		const {
 			region,
-			sort_type: sortType,
+			// sort_type: sortType,
 			search
 		} = query;
 
 		//TODO: !! better to validate queries
+
+		// const resolvedSortType = sortType === 'DEC' ? 'DEC' : 'ASC';
 
 		try{
 			const { countries, meta } = await $countryService.getAllCountries({
 				limit: PER_PAGE,
 				offset: 0,
 				region: region || null,
-				q: search || null
+				q: search || null,
+				// sortType: resolvedSortType
 			});
 			return {
 				countries,
@@ -99,9 +99,9 @@ export default {
 					region: region || null,
 					search: search || ''
 				},
-				sort: {
-					type: sortType || 'ASC'
-				}
+				// sort: {
+				// 	type: resolvedSortType
+				// }
 			};
 		}catch(err){
 			if(process.env.NODE_ENV === 'development') console.error(err);
@@ -118,16 +118,6 @@ export default {
 			perPage: PER_PAGE,
 		}
 	},
-	computed:{
-		shownCountries(){
-			const result = [...this.countries];
-			const coef = this.sort.type === 'ASC' ? 1 : -1;
-
-			result.sort((a, b) => a.names.common.localeCompare(b.names.common) * coef);
-
-			return result;
-		}
-	},
 	watch: {
 		"filter.region"(){
 			this.resetAndFetch();
@@ -138,10 +128,10 @@ export default {
 				this.resetAndFetch();
 			}, 300);
 		},
-		"sort.type"(){
-			this.updateURLQueries();
-		},
-		shownCountries: {
+		// "sort.type"(){
+		// 	this.resetAndFetch();
+		// },
+		countries: {
 			immediate: true,
 			handler(){
 				// wait for countries to be mounted
@@ -222,12 +212,12 @@ export default {
 			this.updateURLQueries();
 			await this.fetchCountries({ append: false });
 		},
-		toggleSort(){
-			this.sort.type = this.sort.type === 'ASC' ? 'DEC' : 'ASC';
-		},
+		// toggleSort(){
+		// 	this.sort.type = this.sort.type === 'ASC' ? 'DEC' : 'ASC';
+		// },
 		updateURLQueries(){
 			const { query } = this.$router.currentRoute;
-			query.sort_type = this.sort.type;
+			// query.sort_type = this.sort.type;
 			query.region = this.filter.region;
 			query.search = this.filter.search;
 
@@ -345,11 +335,14 @@ $input-h: 42px;
 		grid-template-columns: repeat(2, 1fr);
 	}
 	.region-select{
-		grid-column: span 6;
+		grid-column: span 12;
 	}
-	.sort-btn{
-		grid-column: span 6;
-	}
+	//.region-select{
+	//	grid-column: span 6;
+	//}
+	//.sort-btn{
+	//	grid-column: span 6;
+	//}
 }
 
 @media #{map-get($display-breakpoints, 'md-and-up')} {
@@ -371,14 +364,14 @@ $input-h: 42px;
 	.country-list{
 		grid-template-columns: repeat(4, 1fr);
 	}
-	.search-box{
-		grid-column: span 6;
-	}
 	.region-select{
-		grid-column: 9 / span 2;
-	}
-	.sort-btn{
 		grid-column: span 2;
 	}
+	//.region-select{
+	//	grid-column: 9 / span 2;
+	//}
+	//.sort-btn{
+	//	grid-column: span 2;
+	//}
 }
 </style>
