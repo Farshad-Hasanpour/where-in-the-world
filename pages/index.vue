@@ -47,13 +47,19 @@
 		</div>
 		<div class="country-list">
 			<country-card
-					v-for="country in paginatedCountries"
-					:key="country.cca3"
+					v-for="country in shownCountries"
+					:key="country.codes.alpha_3"
 					ref="countryCard"
 					:country="country"
 			/>
+			<template v-if="loadingMore">
+				<country-skeleton v-for="i in perPage" :key="`country-skeleton-${i}`" />
+			</template>
 		</div>
-		<p v-show="!paginatedCountries.length" class="no-country">
+		<p v-show="loadingMore" style="text-align: center; font-size: 32px; margin-bottom: 16px;">
+			Loading More...
+		</p>
+		<p v-show="!shownCountries.length && !loadingMore" class="no-country">
 			no country is matched with specified filters
 		</p>
 		<div ref="autoPagination" class="auto-pagination" />
@@ -63,16 +69,10 @@
 <script>
 let flagLazyLoadObserver = null;
 let autoPaginationObserver = null;
+let searchDebounceTimer = null;
 
-function termHasAllCharsOrderWise(term, charSet){
-	let previousCharIndex = 0;
-	for(let i = 0; i < charSet.length; i++){
-		const indexOfChar = term.slice(previousCharIndex, term.length).indexOf(charSet[i]);
-		if(indexOfChar < 0) return false;
-		previousCharIndex += indexOfChar + 1;
-	}
-	return true;
-}
+const ALL_REGIONS = ['Africa', 'America', 'Asia', 'Europe', 'Oceania', 'Antarctic'];
+const PER_PAGE = 25; // divisible by 2, 3 and 4 (countries per row across breakpoints)
 
 export default {
 	name: 'IndexPage',
@@ -87,9 +87,15 @@ export default {
 		//TODO: !! better to validate queries
 
 		try{
-			const allCountries = await $countryService.getAllCountries();
+			const { countries, meta } = await $countryService.getAllCountries({
+				limit: PER_PAGE,
+				offset: 0,
+				region: region || null,
+				q: search || null
+			});
 			return {
-				allCountries,
+				countries,
+				meta,
 				filter: {
 					region: region || null,
 					search: search || ''
@@ -109,77 +115,54 @@ export default {
 	},
 	data(){
 		return{
-			page: 1,
-			perPage: 25 // It's better to be divisible by 2, 3 and 4 (number of countries per row in various screens)
+			loadingMore: false,
+			allRegions: ALL_REGIONS,
+			perPage: PER_PAGE,
 		}
 	},
 	computed:{
-		allRegions(){
-			return Array.from(
-				new Set(
-					this.allCountries.map(country => country.region)
-				)
-			)
-		},
 		shownCountries(){
-			let result = this.allCountries;
-			const searchChars = this.filter.search?.toLowerCase().split('');
+			const result = [...this.countries];
+			const coef = this.sort.type === 'ASC' ? 1 : -1;
 
-			result = result.filter(country => {
-				// filter by region
-				if(this.filter.region && country.region !== this.filter.region) return false;
-				// filter by search term
-				return !(
-					searchChars?.length &&
-					!termHasAllCharsOrderWise(country.name.common?.toLowerCase() || '', searchChars)
-					// !termHasAllCharsOrderWise(country.name.official?.toLowerCase() || '', searchChars) &&
-					// !termHasAllCharsOrderWise(country.name.nativeName?.toLowerCase() || '', searchChars)
-				)
+			result.sort((a, b) => {
+				let compare = 0;
+				if(this.sort.field === 'name'){
+					compare = a.names.common.localeCompare(b.names.common);
+				}else if(this.sort.field === 'population'){
+					if(a.population > b.population) compare = 1;
+					else if(a.population < b.population) compare = -1;
+				}
+				return compare * coef;
 			});
 
-			const coef = this.sort.type === 'ASC' ? 1 : -1;
-			result.sort((a, b) => {
-				let result = 0;
-				if(this.sort.field === 'name'){
-					result = a.name.common.localeCompare(b.name.common);
-				}else if(this.sort.field === 'population'){
-					if(a.population > b.population) result = 1;
-					else if(a.population < b.population) result = -1;
-				}
-				return result * coef;
-			})
-
-			return result
-		},
-		paginatedCountries(){
-			return this.shownCountries.slice(0, this.page * this.perPage)
+			return result;
 		}
 	},
 	watch: {
 		"filter.region"(){
-			this.page = 1;
-			this.updateURLQueries()
+			this.resetAndFetch();
 		},
 		"filter.search"(){
-			this.page = 1;
-			this.updateURLQueries()
+			clearTimeout(searchDebounceTimer);
+			searchDebounceTimer = setTimeout(() => {
+				this.resetAndFetch();
+			}, 300);
 		},
 		"sort.field"(){
-			this.page = 1;
-			this.updateURLQueries()
+			this.updateURLQueries();
 		},
 		"sort.type"(){
-			this.page = 1;
-			this.updateURLQueries()
+			this.updateURLQueries();
 		},
-		paginatedCountries: {
+		shownCountries: {
 			immediate: true,
 			handler(){
 				// wait for countries to be mounted
 				this.$nextTick(() => {
 					// get mounted countries
 					const countryCardsRef = this.$refs.countryCard;
-					if(!countryCardsRef) return;
+					if(!countryCardsRef || !flagLazyLoadObserver) return;
 					// activate image lazy load for each mounted country card
 					countryCardsRef.forEach(countryCard => {
 						flagLazyLoadObserver.observe(countryCard.$refs.flagImage);
@@ -210,20 +193,49 @@ export default {
 			entries.forEach(entry => {
 				if(!entry.isIntersecting) return;
 				this.$nextTick(() => {
-					this.page = this.page + 1;
+					this.fetchCountries({ append: true });
 				})
 			})
 		});
 		autoPaginationObserver.observe(this.$refs.autoPagination);
 	},
 	beforeDestroy(){
-		//unobserve
-		this.$refs.countryCard.forEach(countryCard => {
-			flagLazyLoadObserver.unobserve(countryCard.$refs.flagImage);
-		});
-		autoPaginationObserver.unobserve(this.$refs.autoPagination);
+		clearTimeout(searchDebounceTimer);
+		const countryCardsRef = this.$refs.countryCard;
+		if(countryCardsRef){
+			countryCardsRef.forEach(countryCard => {
+				flagLazyLoadObserver.unobserve(countryCard.$refs.flagImage);
+			});
+		}
+		if(this.$refs.autoPagination){
+			autoPaginationObserver.unobserve(this.$refs.autoPagination);
+		}
 	},
 	methods: {
+		async fetchCountries({ append = false } = {}){
+			if(this.loadingMore) return;
+			if(append && !this.meta?.more) return;
+
+			this.loadingMore = true;
+			try{
+				const { countries, meta } = await this.$countryService.getAllCountries({
+					limit: PER_PAGE,
+					offset: append ? this.countries.length : 0,
+					region: this.filter.region,
+					q: this.filter.search || null
+				});
+				this.countries = append ? [...this.countries, ...countries] : countries;
+				this.meta = meta;
+			}catch(err){
+				if(process.env.NODE_ENV === 'development') console.error(err);
+			}finally{
+				this.loadingMore = false;
+			}
+		},
+		async resetAndFetch(){
+			this.updateURLQueries();
+			await this.fetchCountries({ append: false });
+		},
 		toggleSort(){
 			if(this.sort.type === 'ASC'){
 				this.sort.type = 'DEC';

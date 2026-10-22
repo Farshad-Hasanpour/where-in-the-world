@@ -6,16 +6,28 @@ export default function($axios, env) {
 	return {
 		getAllCountries({
 			fields = 'codes.alpha_3,names.common,names.native,population,region,capitals.name,flag',
-			limit = 25
+			limit = 25,
+			offset = 0,
+			region = null,
+			q = null
 		} = {}){
+			const params = {
+				response_fields: fields,
+				limit,
+				offset
+			};
+			if(region) params.region = region;
+			if(q) params.q = q;
+
 			return $axios.get(`https://api.restcountries.com/countries/v5`, {
 				headers,
-				params: {
-					response_fields: fields,
-					limit,
-				}
+				params
 			}).then(async res => {
-				return await Promise.all(res.data.data.objects.map(async country => await this.sanitizeCountry(country)))
+				const { objects, meta } = res.data.data;
+				const countries = await Promise.all(
+					objects.map(async country => await this.sanitizeCountry(country))
+				);
+				return { countries, meta };
 			})
 		},
 		getCountryDetails({
