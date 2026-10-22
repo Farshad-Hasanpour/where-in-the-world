@@ -87,9 +87,11 @@ export default {
 		proxy: true
 	},
 	proxy: {
-		'/api/': {
-			target: 'https://api.restcountries.com/countries/v5/',
-			pathRewrite: {'^/api/': ''}
+		// Target must be origin-only; path belongs in pathRewrite (http-proxy-middleware).
+		'/api': {
+			target: 'https://api.restcountries.com',
+			pathRewrite: { '^/api': '/countries/v5' },
+			changeOrigin: true
 		}
 	},
 	server:{

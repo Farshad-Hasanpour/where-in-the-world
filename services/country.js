@@ -19,7 +19,7 @@ export default function($axios, env) {
 			if(region) params.region = region;
 			if(q) params.q = q;
 
-			return $axios.get(`/api/`, {
+			return $axios.get('/api', {
 				headers,
 				params
 			}).then(async res => {
