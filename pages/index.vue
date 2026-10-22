@@ -37,7 +37,7 @@
 				/>
 			</div>
 			<button v-wave type="button" class="sort-btn normal" @click.stop="toggleSort">
-				<span class="sort-btn__name">sort: {{ sort.field }}</span>
+				<span class="sort-btn__name">sort: Name</span>
 				<c-icon
 						:name="$store.state.icons.asc"
 						color="var(--color-input)"
@@ -79,7 +79,6 @@ export default {
 	async asyncData({ error, query, $countryService }){
 		const {
 			region,
-			sort_field: sortField,
 			sort_type: sortType,
 			search
 		} = query;
@@ -101,8 +100,7 @@ export default {
 					search: search || ''
 				},
 				sort: {
-					field: sortField || 'population',
-					type: sortType || 'DEC'
+					type: sortType || 'ASC'
 				}
 			};
 		}catch(err){
@@ -125,16 +123,7 @@ export default {
 			const result = [...this.countries];
 			const coef = this.sort.type === 'ASC' ? 1 : -1;
 
-			result.sort((a, b) => {
-				let compare = 0;
-				if(this.sort.field === 'name'){
-					compare = a.names.common.localeCompare(b.names.common);
-				}else if(this.sort.field === 'population'){
-					if(a.population > b.population) compare = 1;
-					else if(a.population < b.population) compare = -1;
-				}
-				return compare * coef;
-			});
+			result.sort((a, b) => a.names.common.localeCompare(b.names.common) * coef);
 
 			return result;
 		}
@@ -148,9 +137,6 @@ export default {
 			searchDebounceTimer = setTimeout(() => {
 				this.resetAndFetch();
 			}, 300);
-		},
-		"sort.field"(){
-			this.updateURLQueries();
 		},
 		"sort.type"(){
 			this.updateURLQueries();
@@ -237,18 +223,11 @@ export default {
 			await this.fetchCountries({ append: false });
 		},
 		toggleSort(){
-			if(this.sort.type === 'ASC'){
-				this.sort.type = 'DEC';
-				return;
-			}
-			if(this.sort.field === 'name') this.sort.field = 'population';
-			else this.sort.field = 'name';
-			this.sort.type = 'ASC';
+			this.sort.type = this.sort.type === 'ASC' ? 'DEC' : 'ASC';
 		},
 		updateURLQueries(){
 			const { query } = this.$router.currentRoute;
 			query.sort_type = this.sort.type;
-			query.sort_field = this.sort.field;
 			query.region = this.filter.region;
 			query.search = this.filter.search;
 
